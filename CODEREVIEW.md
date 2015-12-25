@@ -1,0 +1,6 @@
+- [ ] Feature should be Heroku friendly.
+- [ ] Prevent oneliner if-statement.
+- [ ] Use early return for negative case as much as possible.
+- [ ] Error or failure cases are handled.
+- [ ] Provide actionable error message as much as possible.
+- [ ] Unit test friendly interface and unit test included.
