@@ -122,7 +122,7 @@ var util = require('util');
       var sign = req.header('X-Hub-Signature');
       var payload = req.body;
 
-      if (evt !== 'pull_request') {
+      if (evt!== 'ping' && evt !== 'pull_request') {
         return res.sendStatus(400);
       }
 
