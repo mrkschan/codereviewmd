@@ -17,6 +17,7 @@ var util = require('util');
   var username = process.env.GITHUB_USERNAME || null;
   var token = process.env.ACCESS_TOKEN || null;
   var repo = process.env.GITHUB_REPO || null;
+  var mdPath = process.env.CODEREVIEWMD || 'CODEREVIEW.md';
 
   function init(run_server) {
     // Validate Github config.
@@ -98,7 +99,7 @@ var util = require('util');
         }
 
         // Run server now.
-        run_server(secret);
+        run_server(username, token, repo, secret, mdPath);
       });
     });
 
@@ -113,7 +114,7 @@ var util = require('util');
     req.end();
   }
 
-  function runserver(secret) {
+  function runserver(username, token, repo, secret, mdPath) {
     app.set('port', port);
 
     var webhookParser = bodyParser.text({'type': 'application/json'});
@@ -133,10 +134,44 @@ var util = require('util');
         return res.sendStatus(400);
       }
 
-      // TODO: Read CODEREVIEW.md at the root of repo - /repos/:owner/:repo/contents/:path
-      // TODO: HTTP-POST a new checklist onto the PR
-      // TODO: Use async task to create a new checklist
-      return res.sendStatus(202);
+      // TODO: Use async task to create a new checklist from CODEREVIEW.md
+      var mdReq = https.request({
+        hostname: 'api.github.com',
+        path: util.format('/repos/%s/%s/contents/%s', username, repo, mdPath),
+        method: 'GET',
+        headers: {
+          'User-Agent': util.format('codereviewmd by %s', username)
+        },
+        auth: util.format('%s:%s', username, token)
+      }, function(mdRes) {
+        var buf = '';
+        mdRes.on('data', function(chunk) {
+          buf += chunk;
+        });
+        mdRes.on('end', function() {
+          var succeed = false;
+
+          if (mdRes.statusCode === 200) {
+            succeed = true;
+          }
+
+          if (!succeed) {
+            var msg = 'Failed to read checklist: HTTP%s - %s';
+            console.error(util.format(msg, mdRes.statusCode, buf));
+          }
+
+          console.log(buf);
+          res.sendStatus(202);
+
+          // TODO: HTTP-POST a new checklist onto the PR
+        });
+      });
+
+      mdReq.on('error', function(e) {
+        var msg = 'Failed to read checklist: %s';
+        console.error(util.format(msg, e.message));
+      });
+      mdReq.end();
     });
 
     app.listen(app.get('port'), function() {
