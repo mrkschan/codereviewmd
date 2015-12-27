@@ -14,7 +14,6 @@ var util = require('util');
   var hostname = process.env.HOSTNAME || 'localhost';
   var port = process.env.PORT || 5000;
 
-  var seed = process.env.SEED || null;
   var username = process.env.GITHUB_USERNAME || null;
   var token = process.env.ACCESS_TOKEN || null;
   var repo = process.env.GITHUB_REPO || null;
@@ -46,9 +45,8 @@ var util = require('util');
     }
 
     // Prepare shared secret.
-    var buf = (seed)? new Buffer(seed, 'ascii')
-                    : new Buffer(crypto.randomBytes(8), 'binary');
-    var secret = crypto.createHash('md5').update(buf.toString('binary'))
+    var msg = username + repo + token;
+    var secret = crypto.createHash('md5').update(msg)
                                          .digest('hex');
 
     // Setup webhook.
