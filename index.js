@@ -144,7 +144,7 @@ var util = require('util');
           var msg = 'Failed to read checklist: HTTP%s - %s';
           console.error(util.format(msg, response.statusCode, body));
 
-          return;
+          return res.sendStatus(202);
         }
 
         var succeed = false;
@@ -157,7 +157,7 @@ var util = require('util');
           var msg = 'Failed to read checklist: HTTP%s - %s';
           console.error(util.format(msg, response.statusCode, body));
 
-          return;
+          return res.sendStatus(202);
         }
 
         // TODO: HTTP-POST a new checklist onto the PR
