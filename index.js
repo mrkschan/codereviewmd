@@ -1,8 +1,8 @@
 var bodyParser = require('body-parser');
 var crypto = require('crypto');
 var express = require('express');
-var https = require('https');
 var querystring = require('querystring');
+var request = require('request');
 var util = require('util');
 
 
@@ -64,54 +64,49 @@ var util = require('util');
       }
     });
 
-    var req = https.request({
-      hostname: 'api.github.com',
-      path: util.format('/repos/%s/%s/hooks', username, repo),
+    var url = util.format('https://api.github.com/repos/%s/%s/hooks',
+                          username, repo);
+    request({
       method: 'POST',
+      url: url,
+      auth: {'user': username, 'pass': token},
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': data.length,
         'User-Agent': util.format('codereviewmd by %s', username)
       },
-      auth: util.format('%s:%s', username, token)
-    }, function(res) {
-      var buf = '';
-      res.on('data', function(chunk) {
-        buf += chunk;
-      });
-      res.on('end', function() {
-        var succeed = false;
+      body: data
+    }, function(error, response, body) {
+      if (error) {
+        var msg = 'Failed to create webhook: HTTP%s - %s';
+        console.error(util.format(msg, response.statusCode, body));
 
-        if (res.statusCode === 201) {
+        process.exit(1);
+        return;
+      }
+
+      var succeed = false;
+
+      if (response.statusCode === 201) {
+        succeed = true;
+      } else if (response.statusCode === 422) {
+        var msg = JSON.parse(body).errors[0].message;
+        if (msg.toLowerCase().indexOf('already exists') > -1) {
           succeed = true;
-        } else if (res.statusCode === 422) {
-          var msg = JSON.parse(buf).errors[0].message;
-          if (msg.toLowerCase().indexOf('already exists') > -1) {
-            succeed = true;
-          }
         }
+      }
 
-        if (!succeed) {
-          var msg = 'Failed to create webhook: HTTP%s - %s';
-          console.error(util.format(msg, res.statusCode, buf));
+      if (!succeed) {
+        var msg = 'Failed to create webhook: HTTP%s - %s';
+        console.error(util.format(msg, response.statusCode, body));
 
-          process.exit(1);
-        }
+        process.exit(1);
+        return;
+      }
 
-        // Run server now.
-        run_server(username, token, repo, secret, mdPath);
-      });
+      // Run server now.
+      run_server(username, token, repo, secret, mdPath);
     });
-
-    req.on('error', function(e) {
-      var msg = 'Failed to create webhook: %s';
-      console.error(util.format(msg, e.message));
-
-      process.exit(1);
-    });
-
-    req.write(data);
-    req.end();
   }
 
   function runserver(username, token, repo, secret, mdPath) {
@@ -123,7 +118,7 @@ var util = require('util');
       var sign = req.header('X-Hub-Signature');
       var payload = req.body;
 
-      if (evt!== 'ping' && evt !== 'pull_request') {
+      if (evt !== 'ping' && evt !== 'pull_request') {
         return res.sendStatus(400);
       }
 
@@ -135,43 +130,40 @@ var util = require('util');
       }
 
       // TODO: Use async task to create a new checklist from CODEREVIEW.md
-      var mdReq = https.request({
-        hostname: 'api.github.com',
-        path: util.format('/repos/%s/%s/contents/%s', username, repo, mdPath),
+      var url = util.format('https://api.github.com/repos/%s/%s/contents/%s',
+                            username, repo, mdPath);
+      request({
         method: 'GET',
+        url: url,
+        auth: {'user': username, 'pass': token},
         headers: {
           'User-Agent': util.format('codereviewmd by %s', username)
-        },
-        auth: util.format('%s:%s', username, token)
-      }, function(mdRes) {
-        var buf = '';
-        mdRes.on('data', function(chunk) {
-          buf += chunk;
-        });
-        mdRes.on('end', function() {
-          var succeed = false;
+        }
+      }, function(error, response, body) {
+        if (error) {
+          var msg = 'Failed to read checklist: HTTP%s - %s';
+          console.error(util.format(msg, response.statusCode, body));
 
-          if (mdRes.statusCode === 200) {
-            succeed = true;
-          }
+          return;
+        }
 
-          if (!succeed) {
-            var msg = 'Failed to read checklist: HTTP%s - %s';
-            console.error(util.format(msg, mdRes.statusCode, buf));
-          }
+        var succeed = false;
 
-          console.log(buf);
-          res.sendStatus(202);
+        if (response.statusCode === 200) {
+          succeed = true;
+        }
 
-          // TODO: HTTP-POST a new checklist onto the PR
-        });
+        if (!succeed) {
+          var msg = 'Failed to read checklist: HTTP%s - %s';
+          console.error(util.format(msg, response.statusCode, body));
+
+          return;
+        }
+
+        // TODO: HTTP-POST a new checklist onto the PR
+        console.log(body);
+        res.sendStatus(202);
       });
-
-      mdReq.on('error', function(e) {
-        var msg = 'Failed to read checklist: %s';
-        console.error(util.format(msg, e.message));
-      });
-      mdReq.end();
     });
 
     app.listen(app.get('port'), function() {
