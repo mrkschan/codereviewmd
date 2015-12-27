@@ -126,7 +126,7 @@ var util = require('util');
       var computed = crypto.createHmac('sha1', secret).update(payload)
                                                       .digest('hex');
       if ('sha1='+computed !== sign) {
-        return res.sendStatus(400);
+        return res.sendStatus(403);
       }
 
       // TODO: Use async task to create a new checklist from CODEREVIEW.md
