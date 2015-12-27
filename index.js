@@ -1,3 +1,4 @@
+var bodyParser = require('body-parser');
 var crypto = require('crypto');
 var express = require('express');
 var https = require('https');
@@ -99,7 +100,7 @@ var util = require('util');
         }
 
         // Run server now.
-        run_server();
+        run_server(secret);
       });
     });
 
@@ -114,12 +115,30 @@ var util = require('util');
     req.end();
   }
 
-  function runserver() {
+  function runserver(secret) {
     app.set('port', port);
-    app.get('/webhook/pullrequest/', function(request, response) {
-      // TODO: Read CODEREVIEW.md at the root of repo
+
+    var webhookParser = bodyParser.text({'type': 'application/json'});
+    app.post('/webhook/pullrequest/', webhookParser, function(req, res) {
+      var evt = req.header('X-Github-Event');
+      var sign = req.header('X-Hub-Signature');
+      var payload = req.body;
+
+      if (evt !== 'pull_request') {
+        return res.sendStatus(400);
+      }
+
+      // TODO: Use constant-time compare in Hmac verification
+      var computed = crypto.createHmac('sha1', secret).update(payload)
+                                                      .digest('hex');
+      if ('sha1='+computed !== sign) {
+        return res.sendStatus(400);
+      }
+
+      // TODO: Read CODEREVIEW.md at the root of repo - /repos/:owner/:repo/contents/:path
       // TODO: HTTP-POST a new checklist onto the PR
       // TODO: Use async task to create a new checklist
+      return res.sendStatus(202);
     });
 
     app.listen(app.get('port'), function() {
