@@ -129,6 +129,16 @@ var util = require('util');
         return res.sendStatus(403);
       }
 
+      if (evt === 'ping') {
+        return res.sendStatus(202);
+      }
+
+      var info = JSON.parse(payload);
+      if (info.action !== 'opened') {
+        return res.sendStatus(202);
+      }
+      var issue = info.pull_request.number;
+
       // TODO: Use async task to create a new checklist from CODEREVIEW.md
       var url = util.format('https://api.github.com/repos/%s/%s/contents/%s',
                             username, repo, mdPath);
@@ -142,7 +152,7 @@ var util = require('util');
       }, function(error, response, body) {
         if (error) {
           var msg = 'Failed to read checklist: HTTP%s - %s';
-          console.error(util.format(msg, response.statusCode, body));
+          console.error(util.format(msg, response.statusCode, error));
 
           return res.sendStatus(202);
         }
@@ -160,9 +170,42 @@ var util = require('util');
           return res.sendStatus(202);
         }
 
-        // TODO: HTTP-POST a new checklist onto the PR
-        console.log(body);
-        res.sendStatus(202);
+        var reply = JSON.parse(body);
+        if (reply.type !== 'file') {
+          var msg = 'Please use a text file as the checklist: %s';
+          console.error(util.format(msg, mdPath));
+
+          return res.sendStatus(202);
+        }
+
+        var content = new Buffer(reply.content, reply.encoding);
+        var data = JSON.stringify({
+          'body': content.toString()
+        });
+        var url = util.format(
+          'https://api.github.com/repos/%s/%s/issues/%s/comments',
+          username, repo, issue
+        );
+        request({
+          method: 'POST',
+          url: url,
+          auth: {'user': username, 'pass': token},
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': data.length,
+            'User-Agent': util.format('codereviewmd by %s', username)
+          },
+          body: data
+        }, function(error, response, body) {
+          if (error) {
+            var msg = 'Failed to create checklist: HTTP%s - %s';
+            console.error(util.format(msg, response.statusCode, error));
+
+            return res.sendStatus(202);
+          }
+
+          return res.sendStatus(202);
+        });
       });
     });
 
