@@ -1,3 +1,5 @@
+Hey reviewers, please check the followings if appropriate.
+
 - [ ] Feature should be Heroku friendly.
 - [ ] Prevent oneliner if-statement.
 - [ ] Use early return for negative case as much as possible.
