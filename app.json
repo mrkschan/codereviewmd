@@ -1,6 +1,6 @@
 {
   "name": "CODEREVIEW.md",
-  "description": "Add code review checklist for Pull Request automatically.",
+  "description": "Add code review checklist to Pull Request automatically.",
   "repository": "https://github.com/mrkschan/codereviewmd",
   "logo": "http://node-js-sample.herokuapp.com/node.svg",
   "keywords": ["github", "pull request", "checklist"],

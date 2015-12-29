@@ -1,7 +1,7 @@
 {
-  "name": "node-js-getting-started",
-  "version": "0.1.5",
-  "description": "A sample Node.js app using Express 4",
+  "name": "CODEREVIEW.md",
+  "description": "Add code review checklist to Pull Request automatically.",
+  "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
@@ -17,12 +17,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/heroku/node-js-getting-started"
+    "url": "https://github.com/mrkschan/codereviewmd"
   },
   "keywords": [
-    "node",
-    "heroku",
-    "express"
+    "github",
+    "pull request",
+    "checklist"
   ],
   "license": "MIT"
 }
