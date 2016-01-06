@@ -5,51 +5,20 @@ var querystring = require('querystring');
 var request = require('request');
 var util = require('util');
 
+var core = require('./core');
 
 (function() {
   'use strict';
-
   var app = express();
 
-  var hostname = process.env.HOSTNAME || 'localhost';
-  var port = process.env.PORT || 5000;
-
-  var username = process.env.GITHUB_USERNAME || null;
-  var token = process.env.ACCESS_TOKEN || null;
-  var repo = process.env.GITHUB_REPO || null;
-  var mdPath = process.env.CODEREVIEWMD || 'CODEREVIEW.md';
+  try {
+    var config = core.getConfig();
+  } catch (e) {
+    console.error(e.message);
+    process.exit(1);
+  }
 
   function init(run_server) {
-    // Validate Github config.
-    if (!username) {
-      var msg = 'Please specify Github %s via environment variable: %s';
-      msg = util.format(msg, 'username', 'GITHUB_USERNAME');
-      console.warn(msg);
-
-      process.exit(1);
-    }
-
-    if (!token) {
-      var msg = 'Please specify Github %s via environment variable: %s';
-      msg = util.format(msg, 'access token', 'ACCESS_TOKEN');
-      console.warn(msg);
-
-      process.exit(1);
-    }
-
-    if (!repo) {
-      var msg = 'Please specify Github %s via environment variable: %s';
-      msg = util.format(msg, 'repository', 'GITHUB_REPO');
-      console.warn(msg);
-
-      process.exit(1);
-    }
-
-    // Prepare shared secret.
-    var msg = username + repo + token;
-    var secret = crypto.createHash('md5').update(msg)
-                                         .digest('hex');
-
     // Setup webhook.
     var data = JSON.stringify({
       'name': 'web',
@@ -58,22 +27,22 @@ var util = require('util');
         'pull_request'
       ],
       'config': {
-        'url': util.format('https://%s/webhook/pullrequest/', hostname),
+        'url': util.format('https://%s/webhook/pullrequest/', config.hostname),
         'content_type': 'json',
-        'secret': secret
+        'secret': config.secret
       }
     });
 
     var url = util.format('https://api.github.com/repos/%s/%s/hooks',
-                          username, repo);
+                          config.username, config.repo);
     request({
       method: 'POST',
       url: url,
-      auth: {'user': username, 'pass': token},
+      auth: {'user': config.username, 'pass': config.token},
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': data.length,
-        'User-Agent': util.format('codereviewmd by %s', username)
+        'User-Agent': util.format('codereviewmd by %s', config.username)
       },
       body: data
     }, function(error, response, body) {
@@ -105,12 +74,12 @@ var util = require('util');
       }
 
       // Run server now.
-      run_server(username, token, repo, secret, mdPath);
+      run_server();
     });
   }
 
-  function runserver(username, token, repo, secret, mdPath) {
-    app.set('port', port);
+  function runserver() {
+    app.set('port', config.port);
 
     var webhookParser = bodyParser.text({'type': 'application/json'});
     app.post('/webhook/pullrequest/', webhookParser, function(req, res) {
@@ -123,8 +92,8 @@ var util = require('util');
       }
 
       // TODO: Use constant-time compare in Hmac verification
-      var computed = crypto.createHmac('sha1', secret).update(payload)
-                                                      .digest('hex');
+      var computed = crypto.createHmac('sha1', config.secret).update(payload)
+                                                             .digest('hex');
       if ('sha1='+computed !== sign) {
         return res.sendStatus(403);
       }
@@ -141,13 +110,13 @@ var util = require('util');
 
       // TODO: Use async task to create a new checklist from CODEREVIEW.md
       var url = util.format('https://api.github.com/repos/%s/%s/contents/%s',
-                            username, repo, mdPath);
+                            config.username, config.repo, config.codereviewmd);
       request({
         method: 'GET',
         url: url,
-        auth: {'user': username, 'pass': token},
+        auth: {'user': config.username, 'pass': config.token},
         headers: {
-          'User-Agent': util.format('codereviewmd by %s', username)
+          'User-Agent': util.format('codereviewmd by %s', config.username)
         }
       }, function(error, response, body) {
         if (error) {
@@ -173,7 +142,7 @@ var util = require('util');
         var reply = JSON.parse(body);
         if (reply.type !== 'file') {
           var msg = 'Please use a text file as the checklist: %s';
-          console.error(util.format(msg, mdPath));
+          console.error(util.format(msg, config.codereviewmd));
 
           return res.sendStatus(202);
         }
@@ -184,16 +153,16 @@ var util = require('util');
         });
         var url = util.format(
           'https://api.github.com/repos/%s/%s/issues/%s/comments',
-          username, repo, issue
+          config.username, config.repo, issue
         );
         request({
           method: 'POST',
           url: url,
-          auth: {'user': username, 'pass': token},
+          auth: {'user': config.username, 'pass': config.token},
           headers: {
             'Content-Type': 'application/json',
             'Content-Length': data.length,
-            'User-Agent': util.format('codereviewmd by %s', username)
+            'User-Agent': util.format('codereviewmd by %s', config.username)
           },
           body: data
         }, function(error, response, body) {
