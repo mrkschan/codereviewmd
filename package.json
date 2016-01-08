@@ -7,9 +7,12 @@
     "start": "node index.js"
   },
   "dependencies": {
+    "body-parser": "1.14.2",
+    "co": "4.6.0",
+    "co-express": "1.2.1",
+    "co-request": "1.0.0",
     "ejs": "2.3.3",
     "express": "4.13.3",
-    "body-parser": "1.14.2",
     "request": "2.67.0"
   },
   "engines": {

@@ -26,7 +26,7 @@ Build, test, run
 npm install
 env HOSTNAME=codereviewmd.herokuapp.com GITHUB_USERNAME=mrkschan \
     GITHUB_REPO=codereviewmd ACCESS_TOKEN=ACCESS_TOKEN \
-    node index.js
+    node --harmony index.js
 ```
 
 
