@@ -50,10 +50,66 @@ var wrap = require('co-express');
     config.secret = secret;
 
     config.codereviewmd = codereviewmd;
+    config.useragent = util.format('codereviewmd by %s', config.username);
+
+    console.info(util.format('Using CODEREVIEW.md, https://github.com/%s/%s/%s',
+                             username, repo, codereviewmd));
   };
 
   exports.init = co.wrap(function* () {
-    // Setup webhook.
+    yield setupWebhook();
+  });
+
+  exports.runserver = function() {
+    var app = express();
+    app.set('port', config.port);
+
+    var webhookParser = bodyParser.text({'type': 'application/json'});
+    app.post('/webhook/pullrequest/', webhookParser, wrap(function* (req, res) {
+      // TODO: Use async task to handle webhook event
+      var evt = req.header('X-Github-Event');
+      var signed = req.header('X-Hub-Signature');
+      var payload = req.body;
+
+      if (evt !== 'ping' && evt !== 'pull_request') {
+        return res.sendStatus(400);
+      }
+      // TODO: Use constant-time compare in Hmac verification
+      var computed = crypto.createHmac('sha1', config.secret).update(payload)
+                                                             .digest('hex');
+      if ('sha1=' + computed !== signed) {
+        console.warn('Webhook Hmac mismatch');
+        return res.sendStatus(403);
+      }
+
+      if (evt === 'ping') {
+        return res.sendStatus(202);
+      }
+
+      var info = JSON.parse(payload);
+      if (info.action !== 'opened') {
+        return res.sendStatus(202);
+      }
+
+      try {
+        var content = yield getCodereviewmd();
+        yield createChecklist(info.pull_request.number, content.toString());
+      } catch (err) {
+        console.error(err.message);
+        return res.sendStatus(202);
+      }
+
+      return res.sendStatus(202);
+    }));
+
+    app.listen(app.get('port'), function() {
+      console.info('Node app is running on port', app.get('port'));
+    });
+  };
+
+  var setupWebhook = function* () {
+    var callback_url = util.format('https://%s/webhook/pullrequest/',
+                                   config.hostname);
     var data = JSON.stringify({
       'name': 'web',
       'active': true,
@@ -61,7 +117,7 @@ var wrap = require('co-express');
         'pull_request'
       ],
       'config': {
-        'url': util.format('https://%s/webhook/pullrequest/', config.hostname),
+        'url': callback_url,
         'content_type': 'json',
         'secret': config.secret
       }
@@ -76,7 +132,7 @@ var wrap = require('co-express');
       headers: {
         'Content-Type': 'application/json',
         'Content-Length': data.length,
-        'User-Agent': util.format('codereviewmd by %s', config.username)
+        'User-Agent': config.useragent
       },
       body: data
     });
@@ -93,98 +149,67 @@ var wrap = require('co-express');
     }
 
     if (!succeed) {
-      throw Error(util.format('Http%s - %s', r.statusCode, r.body));
+      throw Error(util.format('Cannot setup webhook, HTTP%s - %s',
+                              r.statusCode, r.body));
     }
-  });
 
-  exports.runserver = function() {
-    var app = express();
-    app.set('port', config.port);
+    console.info(util.format('Registered callback, %s', callback_url));
+  };
 
-    var webhookParser = bodyParser.text({'type': 'application/json'});
-    app.post('/webhook/pullrequest/', webhookParser, wrap(function* (req, res) {
-      var evt = req.header('X-Github-Event');
-      var sign = req.header('X-Hub-Signature');
-      var payload = req.body;
-
-      if (evt !== 'ping' && evt !== 'pull_request') {
-        return res.sendStatus(400);
+  var getCodereviewmd = function* () {
+    var url = util.format('https://api.github.com/repos/%s/%s/contents/%s',
+                          config.username, config.repo, config.codereviewmd);
+    var r = yield request({
+      method: 'GET',
+      url: url,
+      auth: {'user': config.username, 'pass': config.token},
+      headers: {
+        'User-Agent': config.useragent
       }
-
-      // TODO: Use constant-time compare in Hmac verification
-      var computed = crypto.createHmac('sha1', config.secret).update(payload)
-                                                             .digest('hex');
-      if ('sha1=' + computed !== sign) {
-        return res.sendStatus(403);
-      }
-
-      if (evt === 'ping') {
-        return res.sendStatus(202);
-      }
-
-      var info = JSON.parse(payload);
-      if (info.action !== 'opened') {
-        return res.sendStatus(202);
-      }
-      var issue = info.pull_request.number;
-
-      // TODO: Use async task to create a new checklist from CODEREVIEW.md
-      var url = util.format('https://api.github.com/repos/%s/%s/contents/%s',
-                            config.username, config.repo, config.codereviewmd);
-      var r = yield request({
-        method: 'GET',
-        url: url,
-        auth: {'user': config.username, 'pass': config.token},
-        headers: {
-          'User-Agent': util.format('codereviewmd by %s', config.username)
-        }
-      });
-
-      if (r.statusCode !== 200) {
-        console.error(util.format('Failed to read checklist: HTTP%s - %s',
-                      r.statusCode, r.body));
-        return res.sendStatus(202);
-      }
-
-      var reply = JSON.parse(r.body);
-      if (reply.type !== 'file') {
-        console.error(util.format('Please use a text file as the checklist: %s',
-                      config.codereviewmd));
-        return res.sendStatus(202);
-      }
-
-      var content = new Buffer(reply.content, reply.encoding);
-      var data = JSON.stringify({
-        'body': content.toString()
-      });
-      var url = util.format(
-        'https://api.github.com/repos/%s/%s/issues/%s/comments',
-        config.username, config.repo, issue
-      );
-      var r = yield request({
-        method: 'POST',
-        url: url,
-        auth: {'user': config.username, 'pass': config.token},
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': data.length,
-          'User-Agent': util.format('codereviewmd by %s', config.username)
-        },
-        body: data
-      });
-      if (r.statusCode !== 201) {
-        console.error(util.format('Cannot create checklist: HTTP%s - %s'),
-                      r.statusCode, r.body);
-        return res.sendStatus(202);
-      }
-
-      console.info(util.format("Created checklist on github.com/%s/%s/pull/%s",
-                   config.username, config.repo, issue));
-      return res.sendStatus(202);
-    }));
-
-    app.listen(app.get('port'), function() {
-      console.log('Node app is running on port', app.get('port'));
     });
+
+    if (r.statusCode !== 200) {
+      throw Error(util.format('Cannot read checklist, HTTP%s - %s',
+                  r.statusCode, r.body));
+    }
+
+    var reply = JSON.parse(r.body);
+    if (reply.type !== 'file') {
+      throw Error(util.format('Expecting a text file, %s',
+                  config.codereviewmd));
+    }
+
+    return new Buffer(reply.content, reply.encoding);
+  };
+
+  var createChecklist = function* (issue, body) {
+    var data = JSON.stringify({
+      'body': body
+    });
+    var url = util.format(
+      'https://api.github.com/repos/%s/%s/issues/%s/comments',
+      config.username, config.repo, issue
+    );
+    var r = yield request({
+      method: 'POST',
+      url: url,
+      auth: {'user': config.username, 'pass': config.token},
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length,
+        'User-Agent': config.useragent
+      },
+      body: data
+    });
+
+    if (r.statusCode !== 201) {
+      throw Error(util.format('Cannot create checklist, HTTP%s - %s'),
+                  r.statusCode, r.body);
+    }
+
+    console.info(
+      util.format('Checklist created, https://github.com/%s/%s/pull/%s',
+                  config.username, config.repo, issue)
+    );
   };
 }(exports));
