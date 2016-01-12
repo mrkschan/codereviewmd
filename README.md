@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mrkschan/codereviewmd.svg)](https://travis-ci.org/mrkschan/codereviewmd)
+
 codereviewmd
 ============
 
