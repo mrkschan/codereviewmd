@@ -27,5 +27,8 @@
     "pull request",
     "checklist"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "rewire": "2.5.1"
+  }
 }
