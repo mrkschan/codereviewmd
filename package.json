@@ -29,6 +29,7 @@
   ],
   "license": "MIT",
   "devDependencies": {
+    "mocha": "2.3.4",
     "rewire": "2.5.1"
   }
 }
