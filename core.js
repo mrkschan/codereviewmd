@@ -22,15 +22,15 @@ exports.configure = function() {
   var codereviewmd = process.env.CODEREVIEWMD || 'CODEREVIEW.md';
 
   if (!username) {
-    throw Error("Environment variable 'GITHUB_USERNAME' is required");
+    throw new Error("Environment variable 'GITHUB_USERNAME' is required");
   }
 
   if (!repo) {
-    throw Error("Environment variable 'GITHUB_REPO' is required");
+    throw new Error("Environment variable 'GITHUB_REPO' is required");
   }
 
   if (!token) {
-    throw Error("Environment variable 'ACCESS_TOKEN' is required");
+    throw new Error("Environment variable 'ACCESS_TOKEN' is required");
   }
 
   // Prepare shared secret.
