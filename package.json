@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "mocha --harmony"
+    "test": "mocha --harmony --full-trace"
   },
   "dependencies": {
     "body-parser": "1.14.2",
