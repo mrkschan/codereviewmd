@@ -184,4 +184,108 @@ describe('core', function testsuiteCore() {
       });
     }); // End derived values.
   }); // End #configure().
+
+  describe('#setupWebhook()', function testsuiteSetupWebhook() {
+    it('should be defined', function() {
+      assert.ok(core.__get__('setupWebhook'));
+    });
+
+    it('should make API call',
+    function testcaseMakeAPICall() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        APIResponse: { statusCode: 201 },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('setupWebhook')();
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        var requestSpy = core.__get__('request');
+        var call = requestSpy.getCall(0);
+        assert(call.args[0].method === 'POST');
+        assert(call.args[0].url ===
+               'https://api.github.com/repos/USER/REPO/hooks');
+        assert(call.args[0].auth.user === 'USER');
+        assert(call.args[0].auth.pass === 'TOKEN');
+      });
+    }); // End make API call.
+
+    it('should recognize new webhook',
+    function testcaseRecognizeNewWebhook() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        APIResponse: { statusCode: 201 },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('setupWebhook')();
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        assert(core.__get__('console').info.calledOnce);
+      });
+    }); // End recognize new webhook.
+
+    it('should recognize existing webhook',
+    function testcaseRecognizeExistingWebhook() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        APIResponse: {
+          statusCode: 422,
+          body: '{"errors": [{"message": "already exists"}]}'
+        },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('setupWebhook')();
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        assert(core.__get__('console').info.calledOnce);
+      });
+    }); // End recognize existing webhook.
+
+    it('should report webhook error',
+    function testcaseReportWebhookError() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        APIResponse: { statusCode: 500, body: 'ERR' },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        assert.throws(function() {
+          var gen = core.__get__('setupWebhook')();
+          gen.next(); // Start generator.
+          gen.next(core.__get__('APIResponse')); // Inject fake API response.
+        }, Error);
+        assert(core.__get__('console').info.notCalled);
+      });
+    }); // End report webhook error.
+  }); // End #setupWebhook().
 });
