@@ -146,8 +146,8 @@ var setupWebhook = function* () {
   }
 
   if (!succeed) {
-    throw Error(util.format('Cannot setup webhook, HTTP%s - %s',
-                            r.statusCode, r.body));
+    throw new Error(util.format('Cannot setup webhook, HTTP%s - %s',
+                                r.statusCode, r.body));
   }
 
   console.info(util.format('Registered callback, %s', callback_url));
