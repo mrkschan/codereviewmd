@@ -288,4 +288,123 @@ describe('core', function testsuiteCore() {
       });
     }); // End report webhook error.
   }); // End #setupWebhook().
+
+  describe('#getCodereviewmd()', function testsuiteGetCodereviewmd() {
+    it('should be defined', function() {
+      assert.ok(core.__get__('getCodereviewmd'));
+    });
+
+    it('should make API call',
+    function testcaseMakeAPICall() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', codereviewmd: 'CODEREVIEW.md',
+          port: 5000
+        },
+        APIResponse: {
+          statusCode: 200,
+          body: '{"type": "file", "content": "", "encoding": "utf-8"}'
+        },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('getCodereviewmd')();
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        var requestSpy = core.__get__('request');
+        var call = requestSpy.getCall(0);
+        assert(call.args[0].method === 'GET');
+        assert(call.args[0].url ===
+               'https://api.github.com/repos/USER/REPO' +
+               '/contents/CODEREVIEW.md');
+        assert(call.args[0].auth.user === 'USER');
+        assert(call.args[0].auth.pass === 'TOKEN');
+      });
+    }); // End make API call.
+
+    it('should return COREREVIEW.md content',
+    function testcaseReturnCodereviewmd() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', codereviewmd: 'CODEREVIEW.md',
+          port: 5000
+        },
+        APIResponse: {
+          statusCode: 200,
+          body: '{"type": "file", "content": "CONTENT", "encoding": "utf-8"}'
+        },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('getCodereviewmd')();
+        gen.next(); // Start generator.
+        // Inject fake API response and retrieve value.
+        var result = gen.next(core.__get__('APIResponse')).value;
+
+        assert(result instanceof Buffer);
+        assert(result.toString() === 'CONTENT');
+      });
+    }); // End return CODEREVIEW.md content.
+
+    it('should report API error',
+    function testcaseReportAPIError() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', codereviewmd: 'CODEREVIEW.md',
+          port: 5000
+        },
+        APIResponse: {
+          statusCode: 500,
+          body: '{"type": "file", "content": "", "encoding": "utf-8"}'
+        },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        assert.throws(function () {
+          var gen = core.__get__('getCodereviewmd')();
+          gen.next(); // Start generator.
+          gen.next(core.__get__('APIResponse')); // Inject fake API response.
+        }, Error);
+      });
+    }); // End report API error.
+
+    it('should report content type error',
+    function testcaseReportContentTypeError() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', codereviewmd: 'CODEREVIEW.md',
+          port: 5000
+        },
+        APIResponse: {
+          statusCode: 200,
+          body: '{"type": "symlink"}'
+        },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        assert.throws(function () {
+          var gen = core.__get__('getCodereviewmd')();
+          gen.next(); // Start generator.
+          gen.next(core.__get__('APIResponse')); // Inject fake API response.
+        }, Error);
+      });
+    }); // End report content type error.
+  }); // End #getCodereviewmd().
 });
