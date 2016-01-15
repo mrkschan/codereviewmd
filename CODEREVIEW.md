@@ -1,9 +1,8 @@
 Hey reviewers, please check the followings if appropriate.
 
-- [ ] Feature should be Heroku friendly.
-- [ ] Prevent oneliner if-statement.
-- [ ] Use early return for negative case as much as possible.
-- [ ] Validate all external inputs (including data from partner API).
+- [ ] Features should be Heroku friendly.
+- [ ] Use early return as much as possible, and use it for negative case.
+- [ ] All external inputs are validated (including data obtained from partner APIs).
 - [ ] Error or failure cases are handled.
 - [ ] Provide actionable error message as much as possible.
 - [ ] Unit test friendly interface and unit test included.
