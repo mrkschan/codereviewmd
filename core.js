@@ -200,8 +200,8 @@ var createChecklist = function* (issue, body) {
   });
 
   if (r.statusCode !== 201) {
-    throw Error(util.format('Cannot create checklist, HTTP%s - %s'),
-                r.statusCode, r.body);
+    throw new Error(util.format('Cannot create checklist, HTTP%s - %s'),
+                    r.statusCode, r.body);
   }
 
   console.info(

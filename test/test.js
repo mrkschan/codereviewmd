@@ -407,4 +407,95 @@ describe('core', function testsuiteCore() {
       });
     }); // End report content type error.
   }); // End #getCodereviewmd().
+
+  describe('#createChecklist()', function testsuiteCreateChecklist() {
+    it('should be defined', function() {
+      assert.ok(core.__get__('createChecklist'));
+    });
+
+    it('should make API call',
+    function testcaseMakeAPICall() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        issue: 1,
+        body: 'BODY',
+        APIResponse: { statusCode: 201 },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('createChecklist')(core.__get__('issue'),
+                                                  core.__get__('body'));
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        var requestSpy = core.__get__('request');
+        var call = requestSpy.getCall(0);
+        assert(call.args[0].method === 'POST');
+        assert(call.args[0].url ===
+               'https://api.github.com/repos/USER/REPO' +
+               '/issues/1/comments');
+        assert(call.args[0].auth.user === 'USER');
+        assert(call.args[0].auth.pass === 'TOKEN');
+        assert(call.args[0].body === '{"body":"BODY"}');
+      });
+    }); // End make API call.
+
+    it('should create comment',
+    function testcaseCreateComment() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        issue: 1,
+        body: 'BODY',
+        APIResponse: { statusCode: 201 },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        var gen = core.__get__('createChecklist')(core.__get__('issue'),
+                                                  core.__get__('body'));
+        gen.next(); // Start generator.
+        gen.next(core.__get__('APIResponse')); // Inject fake API response.
+
+        assert(core.__get__('console').info.calledOnce);
+      });
+    }); // End create comment.
+
+    it('should report API error',
+    function testcaseReportAPIError() {
+      core.__with__({
+        // Inputs
+        config: {
+          username: 'USER', repo: 'REPO', token: 'TOKEN', secret: 'SECRET',
+          hostname: 'HOST', useragent: 'UA', port: 5000
+        },
+        issue: 1,
+        body: 'BODY',
+        APIResponse: { statusCode: 500 },
+
+        // Outputs
+        console: { info: sinon.spy() },
+        request: sinon.spy()
+      })(function() {
+        assert.throws(function() {
+          var gen = core.__get__('createChecklist')(core.__get__('issue'),
+                                                    core.__get__('body'));
+          gen.next(); // Start generator.
+          gen.next(core.__get__('APIResponse')); // Inject fake API response.
+        }, Error);
+
+        assert(core.__get__('console').info.notCalled);
+      });
+    }); // End report API error.
+  }); // End #createChecklist().
 });
