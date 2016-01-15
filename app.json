@@ -3,6 +3,6 @@
   "description": "Add code review checklist to Pull Request automatically.",
   "repository": "https://github.com/mrkschan/codereviewmd",
   "logo": "http://node-js-sample.herokuapp.com/node.svg",
-  "keywords": ["github", "pull request", "checklist"],
+  "keywords": ["github", "pull request", "code review", "checklist"],
   "image": "heroku/nodejs"
 }

@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/mrkschan/codereviewmd.svg)](https://travis-ci.org/mrkschan/codereviewmd)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy)
 
 codereviewmd
 ============
