@@ -166,14 +166,14 @@ var getCodereviewmd = function* () {
   });
 
   if (r.statusCode !== 200) {
-    throw Error(util.format('Cannot read checklist, HTTP%s - %s',
-                r.statusCode, r.body));
+    throw new Error(util.format('Cannot read checklist, HTTP%s - %s',
+                    r.statusCode, r.body));
   }
 
   var reply = JSON.parse(r.body);
   if (reply.type !== 'file') {
-    throw Error(util.format('Expecting a text file, %s',
-                config.codereviewmd));
+    throw new Error(util.format('Expecting a text file, %s',
+                    config.codereviewmd));
   }
 
   return new Buffer(reply.content, reply.encoding);
