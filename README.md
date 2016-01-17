@@ -41,9 +41,7 @@ FAQ
    and let everyone on the team to share the same goals in a code review?
    Also, is it better to write down the traps and avoid them all?
 
-   E.g. "If this PR adds an online DDL to MySQL table, make sure there is no concurrent INSERTs that could possibly introduce Duplicate Key error on that table."
-
-   More examples? See https://github.com/mrkschan/codereviewmd/blob/master/CODEREVIEW.md.
+   Examples? See https://github.com/mrkschan/codereviewmd/blob/master/CODEREVIEW.md.
 
 2. Why not using CONTRIBUTING.md?
 
