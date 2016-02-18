@@ -4,7 +4,7 @@
 codereviewmd
 ============
 
-Create code review checklist on Github Pull Request automatically.
+Create code review checklist on Github Pull Request automatically. (Discountinued, in favor of Pull Request template - https://github.com/blog/2111-issue-and-pull-request-templates).
 
 
 Quickstart
